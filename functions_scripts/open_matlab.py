@@ -7,20 +7,22 @@ import numpy as np
 # Replace 'file_path' with the path to your MATLAB file.
 #path = '/media/data/nextcloud/analysis/summary' #/home/gerard/analysis/from_matlab/summary/ct20_test.mat'
 
-def matlab2python(actionFlag, file_name, fields2call, file_path='/home/gerard/nextcloud/analysis/localization/summary'):
+def matlab2python(actionFlag, file_name, section ,fields2call, file_path='/home/gerard/nextcloud/analysis/localization/summary'):
 
     """"
+    actionFlag : if == 0: only list the fields, else, load the fields  
+    section : possible values: allEv, perSyn
     file_path = '/media/data/nextcloud/analysis/summary/ct20_test.mat' #/home/gerard/analysis/from_matlab/summary/ct20_test.mat'
     fields2call = ['synID','x','y', 'timeFromLast']
     
      """
     file_path = file_path + '/' + file_name + '.mat'
     #file_nameO = '/' + file_name
-    file_name = '/' + file_name + '/allEv/'
+    file_name = '/' + file_name + '/'+ section+'/'
     # Open the MATLAB file using h5py
     with h5py.File(file_path, 'r') as file:
 
-        if actionFlag == 1:
+        if actionFlag == 0:
             #print(list(file[file_name].keys()))
             return list(file[file_name].keys())
         else:
