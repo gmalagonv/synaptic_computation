@@ -141,6 +141,52 @@ def grapher(df_syn):
 
 
 
+
+def rename_clusters(clusters):
+    # to rename clusters and change from 0-base to 1-based
+    #mask = 
+    clusters[clusters >= 0] += 1
+    start_val = max(clusters) + 1
+    
+    if start_val == 0:
+        start_val = 1
+    for i in range(len(clusters)):
+        if clusters[i] == -1:
+            clusters[i] = start_val
+            start_val += 1
+    return clusters
+
+
+
+def fuse_clusters(df_syn):
+    if 'cluster' in df_syn.columns:
+        df_syn['x_o'] = df_syn['x']
+        df_syn['y_o'] = df_syn['y']
+
+        unique_clusters = df_syn['cluster'].unique()
+        if len(unique_clusters) < len(df_syn['cluster']):
+            # print('SYNID: ', df_syn.loc[0, 'synID'])
+            for i in range(len(unique_clusters)):
+               
+                msk = df_syn['cluster'] == unique_clusters[i]
+                if sum(msk) > 1:
+                  
+                    df_syn.loc[msk, 'x'] = (df_syn.loc[msk, 'x']).mean()
+                    df_syn.loc[msk, 'y'] = (df_syn.loc[msk, 'y']).mean()
+        
+        
+             
+        
+    else:
+        print('none cluster yet defined')
+
+    return df_syn
+
+
+
+
+
+
 def clustering(df_syn, algorithmFlag, standarizeFlag=False):
 
     pixel_size = 86.6667
@@ -157,10 +203,14 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
 
     if algorithmFlag == 1:
         # Perform DBSCAN clustering
+        #https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html
         dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        #df_syn['cluster'] = dbscan.fit_predict(df_syn)
-        df_syn['cluster'] = dbscan.fit_predict(df_syn[['x','y']])
-    
+        clusters  = dbscan.fit_predict(df_syn[['x','y']])
+        df_syn['cluster_o'] = clusters
+        clusters = rename_clusters(clusters)
+        df_syn['cluster'] = clusters
+
+
     elif algorithmFlag == 2:
 
 
@@ -169,8 +219,11 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
         #cluster_labels = optics.fit_predict(df_scaled)
 
         # Add cluster labels to DataFrame
-        df_syn['cluster'] = optics.fit_predict(df_syn[['x','y']])
-    
+        clusters = optics.fit_predict(df_syn[['x','y']])
+        df_syn['cluster_o'] = clusters
+        clusters = rename_clusters(clusters)
+        df_syn['cluster'] = clusters
+
     elif algorithmFlag == 3:
         #similar 2 MATLAB clustering
         # methods at: https://docs.scipy.org/doc/scipy/reference/generated/scipy.cluster.hierarchy.linkage.html
@@ -184,8 +237,11 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
     return(df_syn)
 
 
+
+
 def re_grapher():
 #only used after clusters have been calculated
+
     print("Bla!")
 
 
@@ -239,6 +295,7 @@ def persyn(df,
            grapherFlag = False, 
            clusteringFlag = False,
            clusteringAlgorithmFlag = 2,
+           fuse_clusters_flag = False,
            plotFlag = False,
            ):
 
@@ -247,6 +304,11 @@ def persyn(df,
 
     if clusteringFlag:
         collumns2add.append('cluster')
+        if clusteringAlgorithmFlag == 1 or clusteringAlgorithmFlag == 2:
+            collumns2add.append('cluster_o')
+    if fuse_clusters_flag:
+        collumns2add.append('x_o')
+        collumns2add.append('y_o')
 
     if grapherFlag:
         collumns2add.append('G')
@@ -278,15 +340,23 @@ def persyn(df,
         original_indexes = df_syn.index
         df_syn = df_syn.reset_index(drop=True)
         
+        
+        if clusteringFlag:
+            df_syn = clustering(df_syn, clusteringAlgorithmFlag)
+
+        if fuse_clusters_flag:
+           
+            df_syn = fuse_clusters(df_syn)
+            
         if grapherFlag:
             df_syn = grapher(df_syn)
 
-        if clusteringFlag:
-            df_syn = clustering(df_syn, clusteringAlgorithmFlag)
+
         
         if plotFlag:
             plottter(df_syn)
 
+        
 ####### filling up the original df with df_syn
 
         #return to original indexes:
@@ -295,8 +365,9 @@ def persyn(df,
             if col not in df.columns:
                 df[col] = np.nan
             
-            df.loc[original_indexes, col] = df_syn[col]
-        
+
+            #df.loc[original_indexes, col] = df_syn[col]
+        df.loc[original_indexes] = df_syn
     return(df)
 
 
@@ -322,6 +393,7 @@ def total(
         grapherFlag,
         clusteringFlag,
         clusteringAlgorithmFlag,
+        fuse_clusters_flag,
         plotFlag
 
           ):
@@ -336,7 +408,8 @@ def total(
         grapherFlag,
         clusteringFlag,
         clusteringAlgorithmFlag,
-        plotFlag
+        fuse_clusters_flag,
+        plotFlag,
 
     )
     # persyn(df, 
