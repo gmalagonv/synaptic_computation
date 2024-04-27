@@ -113,28 +113,64 @@ def repeatedSynID_remover(df):
 
    ######################################################################## 
    #THE FOLLOWING FUNCTIONS ARE USE ONLY INSIDE PERSYN
-def grapher(df_syn):
+def grapher(df_syn, fusedClustersFlag=False):
 
-    attributes_nodes = ['x','y','frame','frameRelat']
+    attributes_nodes = ['x','y'] #'frame' & 'frameRelat' deleted: irrelevant..... irrelevant?
     attributes_edges = ['timeFromLast','distFromLast']
     df_syn['G'] = np.nan
     G = nx.DiGraph()
+    node_source = df_syn.index
+
+    if fusedClustersFlag:
+
+
+        nu_clusters = (df_syn['cluster'] - 1).tolist()
+        print(nu_clusters)
+        checked_indexes = [None] * len(node_source)
+        startval = 0
+
+        for i in node_source:
+            if i not in checked_indexes:
+                msk = [cluster == nu_clusters[i] for cluster in nu_clusters]
+                #print(msk)
+                #nu_clusters = [startval if mask else cluster for mask, cluster in zip(msk, nu_clusters)]
+                nu_clusters = [startval if msk[i] else cluster for i, cluster in enumerate(nu_clusters)]
+
+                idxs = [value for value, mask_value in zip(node_source, msk) if mask_value]
+                checked_indexes.extend(idxs)
+                startval += 1
+
+        node_source = nu_clusters
+
+
+
+  
 
     # G.add_nodes_from(df_syn.index)
-    for node_index in df_syn.index:
-        node_attributes = df_syn.loc[node_index, attributes_nodes].to_dict()  # Get attributes for the node from DataFrame row
-        G.add_node(node_index, **node_attributes)  # Add node with attributes
+    for node_index in set(node_source):
+        node_indexName = node_index
+        
+        if fusedClustersFlag:
 
-    for i in range(len(df_syn) - 1):
-        source_node = df_syn.index[i]
-        target_node = df_syn.index[i + 1]
+            msk = [cluster == node_index for cluster in nu_clusters]
+
+            indexes = df_syn.index[msk]
+            node_index = indexes[0]
+        
+        node_attributes = df_syn.loc[node_index, attributes_nodes].to_dict()  # Get attributes for the node from DataFrame row
+        G.add_node(node_indexName, **node_attributes)  # Add node with attributes
+    
+
+    for i in range(len(node_source) - 1):
+        source_node = node_source[i]
+        target_node = node_source[i + 1]
         edge_aributes = df_syn.loc[(i + 1), attributes_edges].to_dict()
         G.add_edge(source_node, target_node, **edge_aributes)
-    # Serialize the graph object to a binary string using pickle
-    #serialized_graph using pickle
+    
+    print('edges in grapher', G.edges())
+
     df_syn.at[0, 'G'] = pickle.dumps(G)
-    #print(G.nodes[0]) 
-    #print(G[0][1])# G.edges[0, 1]
+ 
 
     return(df_syn)
 
@@ -254,10 +290,19 @@ def plottter(df_syn):
         serialized_graph = df_syn.at[0, 'G']
         G = pickle.loads(serialized_graph)
 
+        print('nodes in plotter', G.nodes())
+        
         pos = {node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes()}
+        #print (pos)
         # Draw nodes with labels
         if 'cluster'in df_syn.columns:
-            node_color = df_syn['cluster']
+            print('here ', len(df_syn['cluster']), len(list(pos.keys())))
+            if len(df_syn['cluster']) == len(list(pos.keys())):
+                
+                node_color = df_syn['cluster']
+            else:
+                node_color = range(len(list(pos.keys())))
+            #node_color = list(pos.keys())
             # Create a ScalarMappable to define the color mapping
             sm = plt.cm.ScalarMappable(cmap='viridis')
             sm.set_array(node_color)
@@ -292,7 +337,8 @@ def plottter(df_syn):
     
 def persyn(df, 
            singleSynFlag = False, #if False, it runs it over the whole dataset. if True,it will ask for a syn number (1 based).If a list, it will use the syn numbers of that list (1 based) 
-           grapherFlag = False, 
+           grapherFlag = False,
+           fusedClustersFlag = False, 
            clusteringFlag = False,
            clusteringAlgorithmFlag = 2,
            fuse_clusters_flag = False,
@@ -347,9 +393,9 @@ def persyn(df,
         if fuse_clusters_flag:
            
             df_syn = fuse_clusters(df_syn)
-            
+
         if grapherFlag:
-            df_syn = grapher(df_syn)
+            df_syn = grapher(df_syn, fusedClustersFlag)
 
 
         
@@ -369,20 +415,7 @@ def persyn(df,
             #df.loc[original_indexes, col] = df_syn[col]
         df.loc[original_indexes] = df_syn
     return(df)
-
-
-
-
-            
-
-
-
-
-        
-
-
-
-
+   
     
     
    
@@ -390,28 +423,31 @@ def total(
         csv_file_path,
         evtype,
         singleSynFlag,
-        grapherFlag,
         clusteringFlag,
-        clusteringAlgorithmFlag,
         fuse_clusters_flag,
+        grapherFlag,
+        fusedClustersFlag,
+        clusteringAlgorithmFlag,
         plotFlag
 
           ):
     
     df = loader(csv_file_path)
     df = select_evtype(df,evtype)
-    df = recalc_lastFrom(df)
     
     df = persyn(
         df,
         singleSynFlag,
         grapherFlag,
+        fusedClustersFlag,
         clusteringFlag,
         clusteringAlgorithmFlag,
         fuse_clusters_flag,
         plotFlag,
 
     )
+    df = recalc_lastFrom(df)
+
     # persyn(df, 
     #        singleSynFlag = False, #if False, it runs it over the whole dataset. if True,it will ask for a syn number (1 based).If a list, it will use the syn numbers of that list (1 based) 
     #        grapherFlag = False, 
