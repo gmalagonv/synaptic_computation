@@ -119,28 +119,12 @@ def grapher(df_syn, fusedClustersFlag=False):
     attributes_edges = ['timeFromLast','distFromLast']
     df_syn['G'] = np.nan
     G = nx.DiGraph()
-    node_source = df_syn.index
+    
 
     if fusedClustersFlag:
-
-
-        nu_clusters = (df_syn['cluster'] - 1).tolist()
-        print(nu_clusters)
-        checked_indexes = [None] * len(node_source)
-        startval = 0
-
-        for i in node_source:
-            if i not in checked_indexes:
-                msk = [cluster == nu_clusters[i] for cluster in nu_clusters]
-                #print(msk)
-                #nu_clusters = [startval if mask else cluster for mask, cluster in zip(msk, nu_clusters)]
-                nu_clusters = [startval if msk[i] else cluster for i, cluster in enumerate(nu_clusters)]
-
-                idxs = [value for value, mask_value in zip(node_source, msk) if mask_value]
-                checked_indexes.extend(idxs)
-                startval += 1
-
-        node_source = nu_clusters
+        node_source = df_syn['cluster']
+    else:
+        node_source = df_syn.index
 
 
 
@@ -152,7 +136,7 @@ def grapher(df_syn, fusedClustersFlag=False):
         
         if fusedClustersFlag:
 
-            msk = [cluster == node_index for cluster in nu_clusters]
+            msk = [cluster == node_index for cluster in node_source]
 
             indexes = df_syn.index[msk]
             node_index = indexes[0]
@@ -167,7 +151,6 @@ def grapher(df_syn, fusedClustersFlag=False):
         edge_aributes = df_syn.loc[(i + 1), attributes_edges].to_dict()
         G.add_edge(source_node, target_node, **edge_aributes)
     
-    print('edges in grapher', G.edges())
 
     df_syn.at[0, 'G'] = pickle.dumps(G)
  
@@ -219,6 +202,24 @@ def fuse_clusters(df_syn):
     return df_syn
 
 
+def reorganize_clusters(df_syn):
+    
+    clusters_o = ( df_syn['cluster'] - 1).tolist()
+    nu_clusters = [None] * len(df_syn.index)
+    checked_indexes = [None] * len(df_syn.index)
+    startval = 0
+
+    for i in df_syn.index:
+        if i not in checked_indexes:
+            msk = [cluster == clusters_o[i] for cluster in clusters_o]
+            nu_clusters = [startval if msk[j] else cluster for j, cluster in enumerate(nu_clusters)]
+            idxs = [value for value, mask_value in zip(df_syn.index, msk) if mask_value]
+            checked_indexes.extend(idxs)
+            startval += 1
+    
+    df_syn['cluster'] = nu_clusters
+
+    return df_syn
 
 
 
@@ -245,6 +246,7 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
         df_syn['cluster_o'] = clusters
         clusters = rename_clusters(clusters)
         df_syn['cluster'] = clusters
+        df_syn = reorganize_clusters(df_syn)
 
 
     elif algorithmFlag == 2:
@@ -259,6 +261,8 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
         df_syn['cluster_o'] = clusters
         clusters = rename_clusters(clusters)
         df_syn['cluster'] = clusters
+        df_syn = reorganize_clusters(df_syn)
+
 
     elif algorithmFlag == 3:
         #similar 2 MATLAB clustering
@@ -267,6 +271,8 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
         # Perform hierarchical clustering
         Z = linkage( df_syn[['x', 'y']], method='complete')  # Adjust method as needed
         df_syn['cluster'] = fcluster(Z, eps, criterion='distance')
+        
+        df_syn = reorganize_clusters(df_syn)
 
 
     
@@ -290,18 +296,17 @@ def plottter(df_syn):
         serialized_graph = df_syn.at[0, 'G']
         G = pickle.loads(serialized_graph)
 
-        print('nodes in plotter', G.nodes())
         
         pos = {node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes()}
         #print (pos)
         # Draw nodes with labels
         if 'cluster'in df_syn.columns:
-            print('here ', len(df_syn['cluster']), len(list(pos.keys())))
+            # print('here ', len(df_syn['cluster']), len(list(pos.keys())))
             if len(df_syn['cluster']) == len(list(pos.keys())):
                 
                 node_color = df_syn['cluster']
             else:
-                node_color = range(len(list(pos.keys())))
+                node_color = range(1,len(list(pos.keys())) + 1)
             #node_color = list(pos.keys())
             # Create a ScalarMappable to define the color mapping
             sm = plt.cm.ScalarMappable(cmap='viridis')
@@ -448,13 +453,6 @@ def total(
     )
     df = recalc_lastFrom(df)
 
-    # persyn(df, 
-    #        singleSynFlag = False, #if False, it runs it over the whole dataset. if True,it will ask for a syn number (1 based).If a list, it will use the syn numbers of that list (1 based) 
-    #        grapherFlag = False, 
-    #        clusteringFlag = False,
-    #        clusteringAlgorithmFlag = 2,
-    #        plotFlag = False,
-    #        ):
 
 
 
