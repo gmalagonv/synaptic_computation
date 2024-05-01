@@ -281,13 +281,9 @@ def clustering(df_syn, algorithmFlag, standarizeFlag=False):
 
 
 
-def re_grapher():
-#only used after clusters have been calculated
-
-    print("Bla!")
 
 
-def plottter(df_syn):
+def plottter(df_syn, Selfpos = False):
     
     plt.figure(figsize=(6, 6))  # Adjust figure size (optional)
     
@@ -298,6 +294,7 @@ def plottter(df_syn):
 
         
         pos = {node: (G.nodes[node]['x'], G.nodes[node]['y']) for node in G.nodes()}
+
         #print (pos)
         # Draw nodes with labels
         if 'cluster'in df_syn.columns:
@@ -306,17 +303,21 @@ def plottter(df_syn):
                 
                 node_color = df_syn['cluster']
             else:
-                node_color = range(1,len(list(pos.keys())) + 1)
+                node_color = range(0,len(list(pos.keys())))
             #node_color = list(pos.keys())
             # Create a ScalarMappable to define the color mapping
             sm = plt.cm.ScalarMappable(cmap='viridis')
             sm.set_array(node_color)
-            plt.colorbar(sm, label='Node Color')
+            plt.colorbar(sm, label='Cluster Color')
 
         else:
             node_color = 'skyblue'
-
-        nx.draw(G, pos, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
+        
+        if ~Selfpos:
+            nx.draw(G, pos, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
+        else:
+            nx.draw(G, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
+            print("no POS ******************************")
 
         plt.title('NetworkX Graph for synapse ' + str(df_syn.loc[0, 'synID']))
         # Set equal scaling for x and y axes
@@ -348,6 +349,7 @@ def persyn(df,
            clusteringAlgorithmFlag = 2,
            fuse_clusters_flag = False,
            plotFlag = False,
+           Selfpos = False,
            ):
 
     
@@ -405,7 +407,7 @@ def persyn(df,
 
         
         if plotFlag:
-            plottter(df_syn)
+            plottter(df_syn, Selfpos)
 
         
 ####### filling up the original df with df_syn
@@ -433,7 +435,8 @@ def total(
         grapherFlag,
         fusedClustersFlag,
         clusteringAlgorithmFlag,
-        plotFlag
+        plotFlag,
+        Selfpos,
 
           ):
     
@@ -449,6 +452,7 @@ def total(
         clusteringAlgorithmFlag,
         fuse_clusters_flag,
         plotFlag,
+        Selfpos,
 
     )
     df = recalc_lastFrom(df)
