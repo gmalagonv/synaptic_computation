@@ -312,12 +312,10 @@ def plottter(df_syn, Selfpos = False):
 
         else:
             node_color = 'skyblue'
-        
-        if ~Selfpos:
+        if not Selfpos:
             nx.draw(G, pos, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
         else:
             nx.draw(G, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
-            print("no POS ******************************")
 
         plt.title('NetworkX Graph for synapse ' + str(df_syn.loc[0, 'synID']))
         # Set equal scaling for x and y axes
