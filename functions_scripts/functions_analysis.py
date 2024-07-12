@@ -119,16 +119,13 @@ def grapher(df_syn, fusedClustersFlag=False):
     attributes_edges = ['timeFromLast','distFromLast']
     df_syn['G'] = np.nan
     G = nx.DiGraph()
-    
+    # 
 
     if fusedClustersFlag:
         node_source = df_syn['cluster']
     else:
         node_source = df_syn.index
 
-
-
-  
 
     # G.add_nodes_from(df_syn.index)
     for node_index in set(node_source):
@@ -153,7 +150,8 @@ def grapher(df_syn, fusedClustersFlag=False):
     
 
     df_syn.at[0, 'G'] = pickle.dumps(G)
- 
+    df_syn['G_planar'] = nx.is_planar(G)
+
 
     return(df_syn)
 
@@ -312,10 +310,17 @@ def plottter(df_syn, Selfpos = False):
 
         else:
             node_color = 'skyblue'
+
+        with_labels = True
+        node_size = 200
+        font_size = 12
+        font_color='cyan'
+        edge_color='gray'
+
         if not Selfpos:
-            nx.draw(G, pos, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
+            nx.draw(G, pos, with_labels=with_labels, node_color=node_color, node_size=node_size, font_size=font_size, font_color=font_color, edge_color=edge_color)
         else:
-            nx.draw(G, with_labels=True, node_color = node_color, node_size=200, font_size=12, font_color='cyan', edge_color='gray')
+            nx.draw(G, with_labels=with_labels, node_color = node_color, node_size=node_size, font_size=font_size, font_color=font_color, edge_color=edge_color)
 
         plt.title('NetworkX Graph for synapse ' + str(df_syn.loc[0, 'synID']))
         # Set equal scaling for x and y axes
